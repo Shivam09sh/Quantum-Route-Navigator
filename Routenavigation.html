@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Quantum Route Navigator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;600&display=swap');
+
+    :root {
+      --primary: #00f7ff;
+      --secondary: #ff00e4;
+      --accent: #7700ff;
+      --dark: #0a0a20;
+      --darker: #050510;
+      --light: rgba(255, 255, 255, 0.9);
+      --glass: rgba(255, 255, 255, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--darker);
+      color: var(--light);
+      background-image: 
+        radial-gradient(circle at 20% 30%, var(--accent) 0%, transparent 20%),
+        radial-gradient(circle at 80% 70%, var(--secondary) 0%, transparent 20%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 5%;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--primary);
+      box-shadow: 0 4px 30px rgba(0, 247, 255, 0.1);
+      position: relative;
+      z-index: 10;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    }
+
+    .header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.8rem;
+      margin: 0;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 15px rgba(0, 247, 255, 0.5);
+      letter-spacing: 1px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .username {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--light);
+      background: rgba(0, 247, 255, 0.1);
+      padding: 8px 20px;
+      border-radius: 50px;
+      border: 1px solid var(--primary);
+      box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .username i {
+      color: var(--primary);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 30px;
+      background: rgba(5, 5, 20, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 247, 255, 0.2);
+      border-radius: 15px;
+      box-shadow: 0 0 40px rgba(0, 247, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .container::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(0, 247, 255, 0.05) 0%, transparent 70%);
+      animation: rotate 20s linear infinite;
+      z-index: -1;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--primary);
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+
+    .input-group i {
+      position: absolute;
+      left: 15px;
+      top: 40px;
+      color: var(--primary);
+      font-size: 1rem;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 15px 12px 40px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 247, 255, 0.3);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--light);
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 10px rgba(0, 247, 255, 0.3);
+    }
+
+    input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--primary);
+      border-radius: 4px;
+      background: transparent;
+      position: relative;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .checkbox-item input[type="checkbox"]:checked {
+      background: var(--primary);
+    }
+
+    .checkbox-item input[type="checkbox"]:checked::after {
+      content: '\f00c';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--darker);
+      font-size: 10px;
+    }
+
+    .checkbox-item label {
+      color: var(--light);
+      font-weight: 500;
+      cursor: pointer;
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    button {
+      padding: 14px;
+      width: 100%;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: var(--darker);
+      cursor: pointer;
+      margin-top: 10px;
+      box-shadow: 0 0 15px rgba(0, 247, 255, 0.5);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 25px rgba(0, 247, 255, 0.7);
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        to bottom right, 
+        rgba(255, 255, 255, 0.3), 
+        rgba(255, 255, 255, 0)
+      );
+      transform: rotate(30deg);
+      transition: all 0.5s ease;
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    .output {
+      margin-top: 30px;
+      font-size: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 247, 255, 0.2);
+      box-shadow: inset 0 0 15px rgba(0, 247, 255, 0.1);
+      position: relative;
+    }
+
+    .output::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+    }
+
+    #map {
+      height: 350px;
+      margin-top: 30px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 247, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      position: relative;
+      z-index: 5;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0, 247, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .route-info {
+      margin-top: 15px;
+    }
+
+    .route-info h3 {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--primary);
+      margin-top: 20px;
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+      border-bottom: 1px solid rgba(0, 247, 255, 0.3);
+      padding-bottom: 5px;
+    }
+
+    .route-info ul {
+      padding-left: 20px;
+      margin: 10px 0;
+    }
+
+    .route-info li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .highlight {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(0, 247, 255, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(0, 247, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 247, 255, 0); }
+    }
+
+    .floating-particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .particle {
+      position: absolute;
+      background: rgba(0, 247, 255, 0.5);
+      border-radius: 50%;
+      animation: float linear infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+      }
+      
+      .container {
+        margin: 20px;
+        padding: 20px;
+      }
+      
+      .checkbox-group {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="floating-particles" id="particles"></div>
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon"><i class="fas fa-route"></i></div>
+      <h1>QUANTUM ROUTE NAVIGATOR</h1>
+    </div>
+    <div class="username">
+      <i class="fas fa-user-astronaut"></i>
+      <span>Shivam Sharma </span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="input-group">
+      <label for="start"><i class="fas fa-rocket"></i> LAUNCH POINT</label>
+      <i class="fas fa-map-marker-alt"></i>
+      <input type="text" id="start" placeholder="Enter your starting location (e.g., Delhi)" />
+    </div>
+
+    <div class="input-group">
+      <label for="end"><i class="fas fa-bullseye"></i> DESTINATION</label>
+      <i class="fas fa-flag-checkered"></i>
+      <input type="text" id="end" placeholder="Enter your destination (e.g., Faridabad)" />
+    </div>
+
+    <div class="input-group">
+      <label for="mode"><i class="fas fa-tachometer-alt"></i> TRANSPORT MODE</label>
+      <i class="fas fa-car"></i>
+      <select id="mode">
+        <option value="driving">Hyper Drive (Car)</option>
+        <option value="walking">Stellar Walk</option>
+        <option value="bicycling">Quantum Cycle</option>
+        <option value="transit">Warp Transit</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-tools"></i> NAVIGATION PREFERENCES</label>
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="avoidTolls" />
+          <label for="avoidTolls">Avoid Space Tolls</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="avoidHighways" />
+          <label for="avoidHighways">Avoid Hyper Highways</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="avoidTraffic" />
+          <label for="avoidTraffic">Avoid Asteroid Fields</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label for="departure"><i class="fas fa-clock"></i> DEPARTURE TIME</label>
+      <i class="fas fa-calendar-alt"></i>
+      <input type="datetime-local" id="departure" />
+    </div>
+
+    <button onclick="generateSmartRoute()" class="pulse">
+      <i class="fas fa-calculator"></i> COMPUTE OPTIMAL ROUTE
+    </button>
+
+    <div class="output" id="output">
+      <p>Enter your journey details above to generate your quantum route analysis.</p>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Initialize floating particles
+    function createParticles() {
+      const container = document.getElementById('particles');
+      const particleCount = window.innerWidth < 768 ? 20 : 50;
+      
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        
+        // Random size between 1px and 3px
+        const size = Math.random() * 2 + 1;
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        
+        // Random position
+        particle.style.left = `${Math.random() * 100}vw`;
+        particle.style.top = `${Math.random() * 100}vh`;
+        
+        // Random animation duration
+        const duration = Math.random() * 20 + 10;
+        particle.style.animationDuration = `${duration}s`;
+        
+        // Random delay
+        particle.style.animationDelay = `${Math.random() * 10}s`;
+        
+        container.appendChild(particle);
+      }
+    }
+    
+    // Initialize the map
+    const map = L.map('map').setView([28.6139, 77.2090], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    const markerGroup = L.layerGroup().addTo(map);
+    
+    // Add custom route layer
+    const routeLayer = L.layerGroup().addTo(map);
+    
+    // Gemini API configuration
+    const GEMINI_API_KEY="AIzaSyCpbhb7PgKZNOIZatSdFmNvY_Jfvv2vqXI"; // 🔐 Replace with your actual Gemini API key
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=GEMINI_API_KEY`;
+    
+    // Function to call Gemini API
+    async function getRouteInfoFromGemini(prompt) {
+      try {
+        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: prompt
+              }]
+            }]
+          })
+        });
+
+        const data = await response.json();
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+          return data.candidates[0].content.parts[0].text;
+        } else {
+          throw new Error("No response from Gemini API");
+        }
+      } catch (error) {
+        console.error("Error calling Gemini API:", error);
+        throw error;
+      }
+    }
+
+    // Geocoding function using OpenStreetMap Nominatim
+    async function geocode(address) {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        } else {
+          throw new Error("Location not found. Please try a more specific address.");
+        }
+      } catch (error) {
+        console.error("Geocoding error:", error);
+        throw new Error("Failed to locate address. Please check your internet connection.");
+      }
+    }
+
+    // Function to calculate midpoint for map view
+    function getMidpoint(lat1, lon1, lat2, lon2) {
+      return [(lat1 + lat2) / 2, (lon1 + lon2) / 2];
+    }
+    
+    // Function to calculate distance between points for zoom level
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+    
+    // Function to determine zoom level based on distance
+    function getZoomLevel(distance) {
+      if (distance > 1000) return 5;
+      if (distance > 500) return 6;
+      if (distance > 200) return 7;
+      if (distance > 100) return 8;
+      if (distance > 50) return 9;
+      if (distance > 20) return 10;
+      if (distance > 10) return 11;
+      if (distance > 5) return 12;
+      if (distance > 2) return 13;
+      return 14;
+    }
+
+    // Main function to generate the route
+    async function generateSmartRoute() {
+      const start = document.getElementById('start').value.trim();
+      const end = document.getElementById('end').value.trim();
+      const mode = document.getElementById('mode').value;
+      const avoidTolls = document.getElementById('avoidTolls').checked;
+      const avoidHighways = document.getElementById('avoidHighways').checked;
+      const avoidTraffic = document.getElementById('avoidTraffic').checked;
+      const departure = document.getElementById('departure').value;
+      const output = document.getElementById('output');
+
+      if (!start || !end) {
+        output.innerHTML = `<p style="color:#ff5555;"><i class="fas fa-exclamation-triangle"></i> Please enter both launch point and destination coordinates.</p>`;
+        return;
+      }
+
+      output.innerHTML = `<p><span class="loading"></span> Engaging quantum route computation...</p>`;
+
+      try {
+        // Get coordinates for both locations
+        const startLatLng = await geocode(start);
+        const endLatLng = await geocode(end);
+        
+        // Calculate distance and zoom level
+        const distance = getDistance(startLatLng[0], startLatLng[1], endLatLng[0], endLatLng[1]);
+        const zoomLevel = getZoomLevel(distance);
+        const midpoint = getMidpoint(startLatLng[0], startLatLng[1], endLatLng[0], endLatLng[1]);
+
+        // Update the map
+        markerGroup.clearLayers();
+        routeLayer.clearLayers();
+        
+        // Add markers with custom icons
+        const startIcon = L.divIcon({
+          html: '<i class="fas fa-rocket" style="color:#00f7ff; font-size:24px;"></i>',
+          className: 'custom-icon',
+          iconSize: [24, 24]
+        });
+        
+        const endIcon = L.divIcon({
+          html: '<i class="fas fa-bullseye" style="color:#ff00e4; font-size:24px;"></i>',
+          className: 'custom-icon',
+          iconSize: [24, 24]
+        });
+        
+        markerGroup.addLayer(L.marker(startLatLng, {icon: startIcon}).bindPopup(`<b>🚀 Launch Point:</b> ${start}`));
+        markerGroup.addLayer(L.marker(endLatLng, {icon: endIcon}).bindPopup(`<b>🎯 Destination:</b> ${end}`));
+        
+        // Add animated route line
+        const routeLine = L.polyline([startLatLng, endLatLng], {
+          color: '#00f7ff',
+          weight: 4,
+          dashArray: '10, 10',
+          dashOffset: '0'
+        }).addTo(routeLayer);
+        
+        // Animate the dashed line
+        let offset = 0;
+        setInterval(() => {
+          offset = (offset + 1) % 20;
+          routeLine.setStyle({dashOffset: offset});
+        }, 100);
+        
+        // Fit map to show both locations with padding
+        map.setView(midpoint, zoomLevel);
+
+        // Create a prompt for Gemini
+        const preferences = [];
+        if (avoidTolls) preferences.push("avoid tolls");
+        if (avoidHighways) preferences.push("avoid highways");
+        if (avoidTraffic) preferences.push("avoid traffic");
+        
+        const modeNames = {
+          'driving': 'Hyper Drive',
+          'walking': 'Stellar Walk',
+          'bicycling': 'Quantum Cycle',
+          'transit': 'Warp Transit'
+        };
+        
+        const prompt = `Act as an advanced quantum route navigation AI. Provide detailed route information for traveling from ${start} to ${end} by ${modeNames[mode] || mode}. 
+        ${preferences.length > 0 ? `Navigation preferences: ${preferences.join(', ')}. ` : ''}
+        ${departure ? `Planned departure time: ${new Date(departure).toLocaleString()}. ` : ''}
+        
+        Include:
+        1. Estimated distance (in km/miles)
+        2. Travel time (in hours/minutes)
+        3. Detailed route description with major waypoints
+        4. Current traffic conditions analysis
+        5. Points of interest along the route
+        6. Fuel/energy consumption estimate
+        7. Weather considerations
+        8. Alternative route options
+        
+        Format the response with clear sections using markdown-style headers (##) and bullet points. Be concise but comprehensive. Include relevant emojis for better readability.`;
+
+        // Get route information from Gemini
+        const geminiResponse = await getRouteInfoFromGemini(prompt);
+
+        // Display the response
+        output.innerHTML = `
+          <div class="route-info">
+            <h2><i class="fas fa-route"></i> QUANTUM ROUTE ANALYSIS</h2>
+            <div class="route-meta">
+              <p><span class="highlight"><i class="fas fa-rocket"></i> LAUNCH:</span> ${start}</p>
+              <p><span class="highlight"><i class="fas fa-bullseye"></i> TARGET:</span> ${end}</p>
+              <p><span class="highlight"><i class="fas fa-tachometer-alt"></i> MODE:</span> ${modeNames[mode] || mode}</p>
+              ${departure ? `<p><span class="highlight"><i class="fas fa-clock"></i> DEPARTURE:</span> ${new Date(departure).toLocaleString()}</p>` : ''}
+              ${preferences.length > 0 ? `<p><span class="highlight"><i class="fas fa-cog"></i> PREFERENCES:</span> ${preferences.join(', ')}</p>` : ''}
+            </div>
+            <div>${formatGeminiResponse(geminiResponse)}</div>
+          </div>
+        `;
+      } catch (error) {
+        output.innerHTML = `
+          <p style="color:#ff5555;">
+            <i class="fas fa-exclamation-triangle"></i> <strong>NAVIGATION ERROR:</strong> ${error.message}
+          </p>
+          <p>Please verify your coordinates and try again.</p>
+        `;
+      }
+    }
+
+    // Helper function to format Gemini's response
+    function formatGeminiResponse(text) {
+      // Convert markdown-like formatting to HTML
+      let html = text
+        .replace(/^##\s+(.*$)/gm, '<h3>$1</h3>')
+        .replace(/^#\s+(.*$)/gm, '<h2>$1</h2>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^-\s+(.*$)/gm, '<li>$1</li>')
+        .replace(/^(\d+\.)\s+(.*$)/gm, '<li>$2</li>')
+        .replace(/\n/g, '<br>');
+      
+      // Wrap lists in ul tags
+      html = html.replace(/(<li>.*?<\/li>)+/g, function(match) {
+        return '<ul>' + match + '</ul>';
+      });
+      
+      // Add some emoji replacements for better visuals
+      html = html
+        .replace(/distance/gi, '📏 distance')
+        .replace(/time/gi, '⏱️ time')
+        .replace(/route/gi, '🗺️ route')
+        .replace(/traffic/gi, '🚦 traffic')
+        .replace(/weather/gi, '☀️ weather')
+        .replace(/alternative/gi, '🔄 alternative');
+      
+      return html;
+    }
+    
+    // Initialize particles when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      createParticles();
+      
+      // Set default departure time to now
+      const now = new Date();
+      const timezoneOffset = now.getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(now - timezoneOffset)).toISOString().slice(0, 16);
+      document.getElementById('departure').value = localISOTime;
+    });
+  </script>
+</body>
+</html>.  
